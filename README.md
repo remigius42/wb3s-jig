@@ -13,6 +13,7 @@
 Copyright 2026 [Andreas Remigius Schmidt](https://github.com/remigius42)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/remigius42/wb3s-jig/actions/workflows/ci.yml/badge.svg)](https://github.com/remigius42/wb3s-jig/actions/workflows/ci.yml)
 
 > [!WARNING]
 > **Work in progress — untested.** This jig and its flashing guides have not yet
