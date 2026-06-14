@@ -46,3 +46,14 @@ repos:
         stages: [commit-msg]
         additional_dependencies:
           - "@commitlint/config-conventional"
+
+  # Gate on a clean CGAL render of the deliverable (see AGENTS.md). Renders in
+  # under a second; only runs when a .scad file is staged. Requires `openscad`.
+  - repo: local
+    hooks:
+      - id: openscad-render
+        name: openscad render (clean CGAL)
+        entry: bash -c 'out=$(openscad -o /tmp/wb3s_jig.stl --render=true wb3s_jig.scad 2>&1 | grep -iE "warning|error"); if [ -n "$out" ]; then echo "$out"; exit 1; fi'
+        language: system
+        files: \.scad$
+        pass_filenames: false
