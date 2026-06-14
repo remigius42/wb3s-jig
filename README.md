@@ -4,9 +4,9 @@
 
 <!-- spellchecker:ignore cb3s ch340 cloudcutter cts datasheet debossed esphome -->
 
-<!-- spellchecker:ignore imgsize isolator kuba ltchiptool makerworld openbeken -->
+<!-- spellchecker:ignore imgsize isolator kuba ltchiptool makerworld openbeken openbekeniot -->
 
-<!-- spellchecker:ignore openscad openshwprojects pinout printables rts ssid -->
+<!-- spellchecker:ignore openscad openshwprojects pinout pipx printables rts ssid -->
 
 <!-- spellchecker:ignore szczodrzyński ttl ttyusb tuya uart uf2 usb2uart viewall -->
 
@@ -93,6 +93,12 @@ The WB3S's chip family is **BK7231T**. (The pin-compatible **CB3S** uses the
 and a CRC error usually means the wrong chip type was selected. Read the marking
 on the can if unsure: `WB3S` → BK7231T, `CB3S` → BK7231N.)
 
+**Install the tool** (`ltchiptool` is a Python package, not a distro package):
+
+```sh
+pipx install ltchiptool   # or: pip install --user ltchiptool
+```
+
 **Reset into download mode:** start a command, then within a few seconds reset
 the chip so the tool can catch it. CEN is the reset line (active-low), brought
 out by the jig: briefly bridge the **CEN wire → GND** by hand. The adapter does
@@ -136,8 +142,14 @@ ltchiptool flash write firmware.uf2
   (`OpenBK7231T_*` images) or **LibreTiny / ESPHome** (`.uf2`).
 - Power-cycle when done and watch the firmware's UART console to confirm it
   boots.
-- GUI alternative (Windows/Mono) that backs up then flashes in one cycle:
-  [BK7231GUIFlashTool](https://github.com/openshwprojects/BK7231GUIFlashTool).
+- GUI alternative that backs up then flashes in one cycle and can auto-download
+  the firmware: `BK7231Flasher.exe` in
+  [BK7231GUIFlashTool](https://github.com/openshwprojects/BK7231GUIFlashTool). But
+  it's a **.NET Framework** app — Windows-native, and on Linux only via **Mono**
+  (`mono BK7231Flasher.exe`), where it's flaky. On Linux just stick with
+  `ltchiptool` above (download the OpenBeken image manually); the Python
+  [`hid_download_py`](https://github.com/OpenBekenIOT/hid_download_py) is a
+  no-Mono CLI fallback.
 
 ## Printing
 
