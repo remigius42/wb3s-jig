@@ -1,0 +1,28 @@
+version: "0.2"
+language: "en-US"
+# Only project-wide jargon that recurs across many files lives here. Terms
+# local to one or two files live in inline `spellchecker:ignore` directives in
+# those files, so the vocabulary travels with the text it belongs to.
+words:
+  - andreas
+  - bk7231n
+  - bk7231t
+  - cgal
+  - datasheet
+  - esphome
+  - libretiny
+  - openbeken
+  - openscad
+  - pinout
+  - remigius
+  - schmidt
+  - tuya
+  - uart
+  - wb3s
+ignorePaths:
+  - .git
+  - "**/.cspell.yaml"
+  - "*.stl"
+dictionaries: []
+dictionaryDefinitions: []
+import: []
