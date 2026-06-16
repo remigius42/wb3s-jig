@@ -2,11 +2,11 @@
 
 <!-- spellchecker:ignore adum aliexpress autocenter beken bk7231n bk7231t bk7231tools -->
 
-<!-- spellchecker:ignore cb3s ch340 cloudcutter cts datasheet debossed esphome -->
+<!-- spellchecker:ignore cb3s ch340 cloudcutter cts datasheet debossed esphome flexural -->
 
 <!-- spellchecker:ignore imgsize isolator kuba ltchiptool makerworld openbeken openbekeniot -->
 
-<!-- spellchecker:ignore openscad openshwprojects pinout pipx printables rts ssid -->
+<!-- spellchecker:ignore openscad openshwprojects petg pinout pipx printables rts ssid -->
 
 <!-- spellchecker:ignore szczodrzyński ttl ttyusb tuya uart uf2 usb2uart viewall -->
 
@@ -153,6 +153,13 @@ ltchiptool flash write firmware.uf2
 
 ## Printing
 
+- **Material: PLA.** Pin alignment is the priority, and the thin, short channel
+  walls around each ~0.9 mm bore need stiffness so the inserted pin (and the
+  wire's pull) can't flex the bore and walk the tip off the pad — PLA's higher
+  flexural modulus beats PETG's give here. A stiffer clamp also presses harder
+  per mm of flex. PLA's downsides (creep, brittle snap) barely apply: `press` is
+  only 0.1 mm so clip flex is tiny, and the jig is clamped only briefly. If the
+  clamp ever cracks when springing it on, reprint **just the clamp** in PETG.
 - Tuned for a **0.4 mm nozzle**. Print the cap **roof-up** (open cavity on the
   bed) so the labels and antenna key land on the top surface.
 - Debossed text stems are ~0.45 mm — legible but not crisp; raise `label_size`

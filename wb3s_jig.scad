@@ -31,10 +31,12 @@
 // clamp's spine runs down and its tongue reaches under the host PCB.
 //
 // NOTE: pad positions (*_y below) are derived from the WB3S datasheet pinout
-// (Table 2-1) + recommended PCB footprint (Fig 6-3): 8 pads per long edge at
-// 2mm pitch, with VCC/GND as the bottom corner pads 1.48mm from the Y=0 corner
-// and CEN/TXD1/RXD1 counted up from there. Verify against your actual module
-// with calipers before printing.
+// (Table 2-1) + the MODULE mechanical drawing (Fig 6-1): 8 pads per long edge at
+// 2mm pitch, with VCC/GND as the bottom corner pads pad_y0 from the Y=0 corner
+// and CEN/TXD1/RXD1 counted up from there. (Fig 6-3 "recommended PCB layout" is
+// the HOST land pattern, not the part - its pad centers are pulled ~0.07mm
+// toward the board edge by a solder toe, so it's NOT the castellation geometry
+// we probe.) Verify against your actual module with calipers before printing.
 //
 // References (datasheet & pinout are NOT bundled here for licensing reasons -
 // see README.md; the dimensions above are transcribed from these):
@@ -50,7 +52,7 @@ pcb_w   = 16;     // module width (X)
 pcb_t   = 0.8;    // PCB substrate thickness (Z) - castellation pad height
 shield_h = 2.0;   // shield can height above PCB top
 fit_clear = 0.3;  // clearance around module in pocket
-host_pcb_t = 1.6; // thickness of the host PCB the WB3S is soldered to
+host_pcb_t = 1.0; // thickness of the host PCB the WB3S is soldered to
 
 // Shield-can footprint (datasheet Fig 6-1/6-2). The roof pocket drops over the
 // can and the surrounding RIMS hug its sides to locate the jig in X/Y; the roof
@@ -61,15 +63,24 @@ shield_y0 = 1.5;   // can front edge, measured from the Y=0 (pad) end
 shield_clear = 0.25; // slip clearance around the can
 
 // Pad center Y-positions, in the SVG / top-view orientation. CEN + VCC on the
-// X=0 (left) edge; TXD1/RXD1 + GND on the X=pcb_w (right) edge.
-txd1_y = 15.48;  // right edge (X=pcb_w), pin 16
-rxd1_y = 13.48;  // right edge (X=pcb_w), pin 15
-gnd_y  = 1.48;   // right edge (X=pcb_w), pin 9  (bottom corner)
-cen_y  = 15.48;  // left edge (X=0), pin 1
-vcc_y  = 1.48;   // left edge (X=0), pin 8  (bottom corner)
+// X=0 (left) edge; TXD1/RXD1 + GND on the X=pcb_w (right) edge. Built up from
+// the bottom corner pad at the module's 2mm pitch.
+pad_y0    = 1.5485;  // bottom corner pad (VCC pin 8 / GND pin 9) center, from the
+                     // Y=0 edge - WB3S MODULE mechanical drawing, Fig 6-1
+pad_pitch = 2;       // pad pitch along each long edge (Fig 6-1)
+txd1_y = pad_y0 + 7*pad_pitch;  // right edge (X=pcb_w), pin 16
+rxd1_y = pad_y0 + 6*pad_pitch;  // right edge (X=pcb_w), pin 15
+gnd_y  = pad_y0;                // right edge (X=pcb_w), pin 9  (bottom corner)
+cen_y  = pad_y0 + 7*pad_pitch;  // left edge (X=0), pin 1
+vcc_y  = pad_y0;                // left edge (X=0), pin 8  (bottom corner)
 
 // ===================== Jig geometry =====================
-wall_t      = 2.0;  // pocket wall thickness (uniform on all four sides)
+wall_t      = 2.0;  // front/back (short) wall thickness; also the module-position
+                    // offset used throughout (cavity, channels, viewports, clamp)
+wall_base   = 1.0;  // LONG (pin) wall thickness at the bench (z=0) - small
+                    // footprint down where it can foul neighbors on a cramped PCB
+wall_top    = 5.0;  // LONG (pin) wall thickness at the roof (z=z_top) - more
+                    // material up top to grip the Dupont pins in their channels
 roof_t      = 1.5;  // thickness of the cap roof above the shield can
 
 pin_angle  = 55;   // channel angle from horizontal (deg)
@@ -85,7 +96,7 @@ channel_len = 12;  // length of angled channel (long enough to break out the
 // Debossed pin labels on the roof top
 label_font  = "Liberation Sans:style=Bold";
 label_depth = 0.6;  // deboss depth
-label_size  = 2.6;  // text height (~0.45mm stems; largest that fits the top face)
+label_size  = 3;  // text height (~0.5mm stems); fits the taper-widened roof top
 
 eps = 0.2; // overlap used when cutting, avoids coplanar/zero-thickness faces
 
@@ -117,16 +128,20 @@ module angled_channel(tip, theta_y, theta_z = 0) {
 // opens into the cavity below - the registration walls stay solid, so the
 // pocket still grips the module squarely.
 //   side: "left"/"right"; p0,p1 are the Y bounds of the window
-view_w = 2.0; // how far inboard from the edge the window reaches
+view_w_left  = 3.0; // how far inboard the left  (CEN/VCC) windows reach
+view_w_right = 3.0; // how far inboard the right (TX1/RX1/GND) windows reach
 module pad_window(side, p0, p1) {
     z0 = -eps;             // full-depth cut: also slices the registration rim
     h  = z_top - z0 + eps; // here so the edge pad stays visible (rim survives
                            // as segments between the pad windows)
+    // windows are nudged 0.5mm OUTBOARD (toward their edge) for a clearer
+    // sight-line onto the pad and the seated pin tip
     if (side == "right") {
-        x1 = wall_t + pcb_w + fit_clear;      // inner face of the right wall
-        translate([x1 - view_w, wall_t + p0, z0]) cube([view_w, p1 - p0, h]);
+        x1 = wall_t + pcb_w;                  // nominal right module edge - mirrors
+                                              // the left window's wall_t reference
+        translate([x1 - view_w_right + 0.5, wall_t + p0, z0]) cube([view_w_right, p1 - p0, h]);
     } else { // "left"
-        translate([wall_t, wall_t + p0, z0]) cube([view_w, p1 - p0, h]);
+        translate([wall_t - 0.5, wall_t + p0, z0]) cube([view_w_left, p1 - p0, h]);
     }
 }
 
@@ -164,8 +179,18 @@ module cap() {
     antenna_engrave_depth = 0.6; // orientation key debossed into the roof top
 
     difference() {
-        // outer block
-        cube([outer_w, outer_l, z_top]);
+        // outer block: trapezoidal in X-Z. The two LONG/pin walls taper from
+        // wall_base at the bench to wall_top at the roof (thin footprint down
+        // low, more pin-gripping material up top); the inner registration faces
+        // stay vertical because they're set by the cavity cuts below, not here.
+        // Front/back (short) walls keep wall_t. The X-Z trapezoid is extruded
+        // along Y over the full outer_l.
+        translate([0, outer_l, 0]) rotate([90, 0, 0])
+            linear_extrude(outer_l)
+                polygon([[wall_t - wall_base,         0],
+                         [wall_t + pcb_w + wall_base,  0],
+                         [wall_t + pcb_w + wall_top,   z_top],
+                         [wall_t - wall_top,           z_top]]);
 
         // --- module cavity, OPEN AT THE BOTTOM (z=0) ---
         // PCB-body clearance: full module footprint, only up to the PCB top.
@@ -207,18 +232,19 @@ module cap() {
         pad_window("left", vcc_y - 1, vcc_y + 1);
 
         // --- debossed pin labels around each viewport ---
-        le  = 0.5;                                        // left-edge start (+X)
-        re  = outer_w - 0.5;                              // right-edge end (-X)
-        ri  = wall_t + pcb_w + fit_clear - view_w - 0.7;  // inboard-right end
+        le  = -0.5;                                       // left-edge start (+X)
+        re  = outer_w + 0.5;                              // right-edge end (-X)
+        ri  = wall_t + pcb_w + fit_clear - view_w_right - 0.3;  // inboard-right end
         off = 1 + 0.4 + label_size/2;                     // clearance past a window edge
-        // VCC / GND: above their viewports, hugging the side edges
-        pin_label("VCC", le, wall_t + vcc_y + off, label_size, "left");
-        pin_label("GND", re, wall_t + gnd_y + off, label_size, "right");
+        // VCC / GND: above their viewports, pushed out past the side edges
+        pin_label("VCC", le, wall_t + vcc_y + off + 0.5, label_size, "left");
+        pin_label("GND", re, wall_t + gnd_y + off + 0.5, label_size, "right");
         // CEN: below its viewport, left edge
-        pin_label("CEN", le, wall_t + cen_y - off, label_size, "left");
-        // TX1 beside its pad; RX1 stacked one line below it
-        pin_label("TX1", ri, wall_t + txd1_y,                    label_size, "right");
-        pin_label("RX1", ri, wall_t + txd1_y - label_size - 0.6, label_size, "right");
+        pin_label("CEN", le, wall_t + cen_y - off - 0.5, label_size, "left");
+        // TX1 to the left of its window; RX1 centered just below the window
+        pin_label("TX1", ri - 0.25, wall_t + txd1_y, label_size, "right");
+        pin_label("RX1", wall_t + pcb_w + fit_clear - view_w_right/2,
+                  wall_t + rxd1_y - off - 0.5, label_size, "center");
 
         // --- antenna orientation key, debossed into the roof top ---
         translate([wall_t, wall_t + pcb_l - antenna_region_h, z_top - antenna_engrave_depth])
@@ -245,7 +271,7 @@ module clamp() {
     spine_d    = 3.0;             // spine thickness (Y), behind the back wall
     arm_len    = pcb_l * 0.5;
     arm_t      = 2.4;
-    press      = 0.4;             // interference: relaxed gap is 'press' less
+    press      = 0.2;             // interference: relaxed gap is 'press' less
                                   // than the stack -> spine flexes, clamping
     clamp_w    = 12;              // central band: wide for strength but still
     clamp_x    = wall_t + (pcb_w - clamp_w)/2; // clears the edge viewports
