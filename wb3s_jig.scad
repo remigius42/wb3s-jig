@@ -64,7 +64,7 @@
 //   WB3S datasheet (c) Tuya:       https://fcc.report/FCC-ID/2ANDL-WB3S/4580793.pdf
 //   LibreTiny WB3S board / pinout: https://docs.libretiny.eu/boards/wb3s/
 
-// spellchecker:ignore castellation datasheet deboss debossed dupont flexure
+// spellchecker:ignore castellation centerlines datasheet deboss debossed dupont flexure
 // spellchecker:ignore bambu differenced halign keepout libretiny pinout preload tuya uart
 // spellchecker:ignore hous petg protosupplies txrx
 
@@ -166,7 +166,10 @@ pair_slot   = 4.5;        // wide enough for BOTH cables side by side: housings 
 // gamble. So: pick the layer height, force the arm to an integer (>=2) layers, then
 // DERIVE the free length that holds the bending strain at 'strain_max'. Force follows
 // (echoed). Downstream (pocket depth, label band) keys off arm_len, so it adapts.
-layer_h    = 0.16; // slicer layer height you will print at (Bambu: 0.2 / 0.16 / 0.12 / 0.08)
+layer_h    = 0.16; // slicer layer height. MAX 0.16 (asserted below): coarser layers
+                   // thicken the arms, push the pockets inboard and starve the central
+                   // block that carries the top-arm anchors + T/R labels. (Bambu: 0.16 /
+                   // 0.12 / 0.08; 0.2 risks the center-block integrity.)
 arm_layers = 2;    // arm thickness in layers; >=2 so the flexure is not a single bead
 arm_t      = max(2, arm_layers) * layer_h;   // flexure thickness = whole number of layers
 E_petg     = 2000; // PETG Young's modulus (MPa = N/mm^2); the design is PETG, NOT brittle PLA
@@ -174,7 +177,7 @@ strain_max = 0.02; // cap flexure surface strain (PETG yields ~2.5-4%; 2% for fa
 arm_w      = 2.5;  // flexure leaf width (Y) - sets force (linear), not strain
 // guided (parallelogram) beam: strain = 3*t*d/L^2  ->  length that just meets strain_max
 arm_len    = sqrt(3 * arm_t * preload / strain_max);
-relief_clear = 0.5;   // clearance each side (Y) between a holder and its pocket wall
+relief_clear = 0.35;   // clearance each side (Y) between a holder and its pocket wall
 // resulting per-pin contact force (two guided arms in parallel): F = 2*E*w*t^3*d/L^3
 echo(str("flexure: arm_t=", arm_t, "mm (", max(2, arm_layers), " x ", layer_h,
          "), arm_len=", arm_len, "mm, force=",
@@ -203,6 +206,22 @@ function c_sign(side)   = (side == "right") ? 1 : -1;
 function holder_in_x(side) =
     c_edge_x(side) + c_sign(side)*(pin_land_out - hous_w/2 - tower_wall);
 function pocket_in_x(side) = holder_in_x(side) - c_sign(side)*arm_len;
+
+// ===================== Sanity guards =====================
+// The central strip between the left/right pockets carries BOTH top-arm anchor laps and
+// the debossed T/R labels. Its width is holder_in_x("right")-holder_in_x("left") - 2*arm_len,
+// and arm_len grows with layer_h/preload (and 1/strain_max) - so a coarser layer silently
+// starves it. Cap the layer height and assert the strip stays solid; else the print is
+// structurally unsound or the labels get shaved off.
+assert(layer_h <= 0.16, str("layer_h=", layer_h,
+       "mm > 0.16: thicker arms thin the central block below structural/label limits. ",
+       "Print at <=0.16mm."));
+strip_w    = pocket_in_x("right") - pocket_in_x("left");
+anchor_lap = 1.0;  // must match the xi inboard lap in dupont_arm()
+assert(strip_w > 2*anchor_lap, str("central strip ", strip_w,
+       "mm <= 2x arm anchor lap (", 2*anchor_lap, "mm): no solid core between pockets"));
+assert(strip_w > 0.65*label_size + 1.0, str("central strip ", strip_w,
+       "mm too thin for the T/R label (~", 0.65*label_size, "mm glyph) + 0.5mm margins"));
 
 // Printed holder SLEEVE in its LOCAL frame: pin tip at origin, pin axis along +Z. The
 // sleeve grips the Dupont HOUSING (pin_drop..housing top) and the cover above it; the
@@ -275,8 +294,12 @@ module pad_relief(pad_y, side, w) {
     py = wall_t + pad_y;
     x0 = (side == "right") ? pocket_in_x("right") : -0.5;
     x1 = (side == "right") ? outer_w + 0.5        : pocket_in_x("left");
-    translate([x0, py - w/2, -eps])
-        cube([x1 - x0, w, z_top + 2*eps]);
+    // break clean through the short edge if less than a full wall_t of block would
+    // be left (else a narrow relief_clear leaves an unprintable sliver there)
+    y0 = (py - w/2 < wall_t)          ? -0.5         : py - w/2;
+    y1 = (py + w/2 > outer_l - wall_t) ? outer_l + 0.5 : py + w/2;
+    translate([x0, y0, -eps])
+        cube([x1 - x0, y1 - y0, z_top + 2*eps]);
 }
 
 // Debossed pin label on the roof top. halign "left" starts the text at x; "right"
@@ -291,8 +314,11 @@ module pin_label(txt, x, y, halign) {
 // 2D serpentine antenna trace, in the physical-module orientation (the two
 // long parallel meander segments at high X = the right side, matching the chip
 // viewed top-down). Engraved into the TOP of the roof as an orientation key.
+// 'grow' widens every line by 2*grow (centerlines unchanged) so the debossed
+// groove clears one extrusion width: native trace = 0.503mm, +2*0.1 -> 0.703mm.
+antenna_line_grow = 0.1;
 module antenna_pattern_2d() {
-    union() {
+    offset(r = antenna_line_grow) union() {
         translate([14.440, 0.681]) square([0.503, 5.232]);
         translate([10.314, 5.410]) square([4.629, 0.503]);
         translate([12.226, 0.681]) square([0.503, 5.232]);
@@ -326,11 +352,9 @@ module cap() {
     // Clear band (Y) between the front (VCC/GND) and back (CEN / TX-RX pair) pockets, and
     // the centre margin so a debossed letter keeps >=0.5mm of material all round (worst
     // case: cap height = label_size).
-    pkt_hw  = (hous_d + 2*tower_wall + 2*relief_clear)/2;               // single pocket half-Y
-    pair_hw = (2*2.54 + hous_clear + 2*tower_wall + 2*relief_clear)/2;  // pair pocket half-Y
+    pkt_hw  = (hous_d + 2*tower_wall + 2*relief_clear)/2;  // single pocket half-Y
     band_lo   = wall_t + pad_y0 + pkt_hw;               // front pocket top edge
     band_hi_L = wall_t + cen_y  - pkt_hw;               // CEN pocket bottom edge (left)
-    band_hi_R = wall_t + (txd1_y + rxd1_y)/2 - pair_hw; // pair pocket bottom edge (right)
     lm = 0.5 + label_size/2;                            // band edge -> letter centre margin
 
     union() {
@@ -360,13 +384,16 @@ module cap() {
             // Labels on the OUTSIDE of the block, in the clear band beside their holders.
             // X is bounded by the block edge (left edge at 1.7, right at 16.3 -> 1.7mm of
             // material outboard); Y centres sit 'lm' inside the band so the letters keep
-            // >=0.5mm all round. T sits inboard (right) - the antenna key blocks the
-            // outside above the pair - kept 0.5mm off the pocket edge.
+            // >=0.5mm all round. T/R can't go outboard (the antenna key blocks above the
+            // pair), so both sit CENTRED in the narrow central strip - T high, R below it -
+            // splitting the margin both sides so a thinner strip won't shave them.
+            strip_cx = (pocket_in_x("left") + pocket_in_x("right"))/2;  // central strip centre (X)
             pin_label("V", 1,  band_lo   + lm, "left");   // above the VCC holder
             pin_label("C", 1,  band_hi_L - lm, "left");   // below the CEN holder
             pin_label("G", 17, band_lo   + lm, "right");  // above the GND holder
-            pin_label("R", 12, band_hi_R - lm, "right");  // below the pair holder
-            pin_label("T", pocket_in_x("right") - 0.5, wall_t + txd1_y, "right");
+            pin_label("T", strip_cx, wall_t + txd1_y, "center"); // in the strip by the pair
+            // R stacked 0.5mm below T (centre-to-centre = a full letter + the 0.5mm gap)
+            pin_label("R", strip_cx, wall_t + txd1_y - (label_size + 0.5), "center");
 
             // --- antenna orientation key, debossed into the roof top ---
             translate([wall_t, wall_t + pcb_l - antenna_region_h, z_top - antenna_engrave_depth])
