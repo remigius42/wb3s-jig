@@ -6,6 +6,11 @@
 # Agent tooling state
 /.claude/**
 
+### Firmware ###
+# Keep firmware images out of the repo: they are a) binary blobs and
+# b) may contain credentials (a stock dump holds the device Wi-Fi SSID/password).
+*.bin
+
 ### OpenSCAD ###
 # Rendered / exported artifacts — regenerated from wb3s_jig.scad
 *.stl
