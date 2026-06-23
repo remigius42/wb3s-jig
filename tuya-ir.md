@@ -4,7 +4,7 @@
 
 <!-- spellchecker:ignore irc02 irrecv irsend libretiny ltchiptool openbeken -->
 
-<!-- spellchecker:ignore openbekeniot openshwprojects pinout rbl tuya wb3s -->
+<!-- spellchecker:ignore openbekeniot openshwprojects pinout rbl ssrc tuya wb3s -->
 
 For the **IR-only** Tuya IR remote/blaster built on a **WB3S** module
 (**BK7231T**). For the **IR + 433 MHz RF** variant, do this first, then continue
@@ -34,7 +34,11 @@ would be BK7231N — the jig fits both; just select the matching type in the too
 
 Join the `OpenBK7231T_xxxx` AP → set Wi-Fi → open the web UI (it has a live log).
 
-- **Try the matching template first** from the
+- **Start from the baseline template** — OpenBeken's
+  [CS-SSRC-IRC](https://openbekeniot.github.io/webapp/devices/Tuya_CS_SSRC_IRC.html)
+  config is the common starting point for both Tuya WB3S remotes: **IR-RX P8, LED
+  P9, IR-TX P26** (the template's P23 `dInput` is the IR+RF unit's side button —
+  absent on the IR-only board). Always verify; or browse the full
   [device database](https://openbekeniot.github.io/webapp/devicesList.html).
 - **IR-RX:** set a candidate pin's role to `IRRecv`, watch the log, and press any
   IR remote at the device — the pin that logs decoded IR is it.
@@ -56,7 +60,7 @@ Set the IR pins, enable **Flag 14** (Config → Flags) to publish received IR to
 Upload ESPHome/LibreTiny's built `image_bk7231t_app.ota.rbl` via OpenBeken's OTA
 panel; rename it to start with `OpenBK7231T_` so OpenBeken's filename check passes
 (use the `.ota.rbl`, **not** the `UG` file). Your jig + backup are the recovery
-path if it fails. Minimal ESPHome (LibreTiny) config:
+path if it fails. Example ESPHome (LibreTiny) config:
 
 ```yaml
 bk72xx:
@@ -67,7 +71,26 @@ remote_transmitter:
 remote_receiver:
   pin: { number: P8, inverted: true }      # IR-RX — verify
   dump: all
+status_led:
+  pin: { number: P9, inverted: true }      # LED — polarity verify
+button:
+  - platform: template
+    name: "TV Power"                         # one template button per IR function
+    on_press:
+      - remote_transmitter.transmit_nec:     # decoded protocol — read via dump: all
+          address: 0xE0E0
+          command: 0x40BF
 ```
+
+Read each code from the logs (`dump: all`) once, then hard-code it as a
+`template` button like above — one per function. **Prefer decoded protocols
+(NEC/Samsung/…) over raw.** The two runtime, no-recompile alternatives — a
+`globals`-based slot store, or the
+[IR/RF Proxy](https://esphome.io/components/ir_rf_proxy/) — replay the **raw**
+captured timings, which are more fragile (capture jitter, repeat-frame and
+receiver-tolerance issues), whereas a decoded code regenerates a spec-clean
+waveform on every send. Runtime learning's only real win is capturing *unknown*
+remotes without a re-flash.
 
 ## References
 
