@@ -73,8 +73,11 @@ this jig → WB3S**.
 
 - **USB-to-TTL UART adapter (CH340G / CH340E)** —
   [AliExpress](https://de.aliexpress.com/item/32809304504.html). **Switch it to
-  3.3 V** — the WB3S is a 3.3 V part and 5 V logic can damage it. Wire TXD1 →
-  adapter RX, RXD1 → adapter TX, plus VCC / GND / CEN.
+  3.3 V** — the WB3S is a 3.3 V part and 5 V logic can damage it. `TXD1`/`RXD1`
+  are the *module's own* UART1 pins (named from the chip's side), so they
+  **cross**: module TXD1 → adapter RX, RXD1 → adapter TX; plus VCC / GND / CEN.
+  Use UART**1** (TXD1/RXD1) — TXD2/RXD2 is only the Tuya boot log, not the
+  programming port.
   - Printable case:
     [MakerWorld](https://makerworld.com/en/models/2462910-case-for-usb-2-ttl-ch340-ch340g-usb2uart)
 - **USB isolator (ADuM3160, 1500 V)** —
