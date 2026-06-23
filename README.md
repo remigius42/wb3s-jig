@@ -2,7 +2,7 @@
 
 <!-- spellchecker:ignore adum aliexpress autocenter beken bk7231n bk7231t bk7231tools -->
 
-<!-- spellchecker:ignore cb3s ch340 cloudcutter cts datasheet debossed esphome flexural -->
+<!-- spellchecker:ignore cb3s ch340 cloudcutter cts datasheet debossed esphome flexural flexure -->
 
 <!-- spellchecker:ignore imgsize isolator kuba ltchiptool makerworld openbeken openbekeniot -->
 
@@ -15,22 +15,18 @@ Copyright 2026 [Andreas Remigius Schmidt](https://github.com/remigius42)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/remigius42/wb3s-jig/actions/workflows/ci.yml/badge.svg)](https://github.com/remigius42/wb3s-jig/actions/workflows/ci.yml)
 
-> [!WARNING]
-> **Work in progress — untested.** This jig and its flashing guides have not yet
-> been printed or verified against real hardware. The `shield_*` dimensions are
-> read off low-resolution datasheet figures, so expect to tune parameters before
-> anything fits. Treat everything here as a design draft and use at your own risk.
-
 An OpenSCAD-printed clip-on jig for flashing a **Tuya WB3S** Wi-Fi/BT module
 *after* it has been SMD-soldered onto a host PCB — no test header, and no
 soldering of flying leads.
 
 The jig is a cap that drops over the module's shield can. Female-to-male Dupont
-jumper wires are pushed (male end first) into angled channels that guide their
-tips onto the five castellated edge pads needed for flashing — **VCC, GND, TXD1,
-RXD1, CEN**. The female ends plug into a USB-UART adapter, so the jig itself
-never wears out. A sprung C-clip squeezes the cap down onto the host PCB to keep
-the pins seated.
+jumper wires are held (male end first) in vertical sleeves carried on sprung
+**parallelogram flexure arms** — one per signal — for the five pads needed for
+flashing (**VCC, GND, TXD1, RXD1, CEN**). Seating the cap flexes the arms so
+each pin presses down onto the exposed solder toe just outboard of the module's
+castellated edge. The female ends plug into a USB-UART adapter, so the jig
+itself never wears out. A sprung C-clip squeezes the cap down onto the host PCB
+to keep the pins loaded.
 
 ## Files
 
@@ -44,14 +40,20 @@ the pins seated.
 
 - **Registration:** the roof drops over the shield can; internal rims hug the
   can sides (X/Y) and the roof rests on the can top (Z).
-- **Contacts:** angled bores carry each Dupont pin from above-outside down to
-  its edge pad. TXD1/RXD1 fan apart because their pads are only 2 mm apart.
+- **Contacts:** each Dupont pin sits in a vertical sleeve on a two-arm
+  parallelogram flexure; seating the cap flexes the arms and presses the pin onto
+  the solder toe just outboard of its edge pad (the parallelogram keeps the pin
+  vertical so it can't walk off). Each pin sits ~0.4 mm proud at rest (`preload`)
+  and lands ~1.6 N on its toe once seated. TXD1/RXD1 share one wide tower because
+  their pads are only 2 mm apart.
 - **Inspection:** a viewport over each pad lets you watch the pin tip seat.
 - **Labels:** pin names are debossed on top next to each viewport; the antenna
   meander is engraved on top as an orientation key (long parallel segments to
   the right = matches the chip viewed top-down).
 - **Clamp:** a C-clip hooks over the cap top and under the host PCB at the back
-  (antenna side, no pads), springing the stack together. Assumes the host PCB is
+  (antenna side, no pads), springing the stack together. Its relaxed jaw is
+  ~0.2 mm under the stack height (`press`), and it has to resist the **sum** of
+  the five arm reactions (~8 N), not merely seat the jig. Assumes the host PCB is
   reachable from behind the module.
 
 ## Pinout (top view, antenna pointing away from you)
@@ -158,16 +160,24 @@ ltchiptool flash write firmware.uf2
 
 ## Printing
 
-- **Material: PLA.** Pin alignment is the priority, and the thin, short channel
-  walls around each ~0.9 mm bore need stiffness so the inserted pin (and the
-  wire's pull) can't flex the bore and walk the tip off the pad — PLA's higher
-  flexural modulus beats PETG's give here. A stiffer clamp also presses harder
-  per mm of flex. PLA's downsides (creep, brittle snap) barely apply: `press` is
-  only 0.1 mm so clip flex is tiny, and the jig is clamped only briefly. If the
-  clamp ever cracks when springing it on, reprint **just the clamp** in PETG.
-- Tuned for a **0.4 mm nozzle**. Print the cap **roof-up** (open cavity on the
-  bed) so the labels and antenna key land on the top surface.
-- Debossed text stems are ~0.45 mm — legible but not crisp; raise `label_size`
+- **Material: PETG.** The contacts are sprung **parallelogram flexure arms**
+  that flex each time the jig is seated; the design is dimensioned around PETG
+  (`E_petg = 2000`, surface strain capped at 2 % for fatigue life). PLA is wrong
+  here — too brittle, the thin arms would snap rather than spring.
+- **Layer height 0.16 mm or finer.** Each flexure arm is a whole number of
+  layers (`arm_t = 2 × layer_h`) and needs **at least two**, so it isn't a single
+  bead — spring force scales with thickness³, so a coarser layer both makes the
+  force a gamble and starves the central block. `wb3s_jig.scad` hard-asserts
+  `layer_h ≤ 0.16`; 0.12 / 0.08 are fine.
+- **Use a well dialed-in printer — there's little wiggle room.** The Dupont
+  towers sit deliberately close to the central block (rigidity), the cap has to
+  match the module/can size, and clearances are tight (module fit 0.3 mm, can
+  slip 0.25 mm, pocket relief 0.35 mm). Dimensional drift binds the module or
+  walks the pins off the solder toes.
+- Tuned for a **0.4 mm nozzle**. Print the cap **flipped — top face (labels,
+  antenna key, sleeve covers) flat on the bed, cavity opening upward** — so every
+  coplanar top is the first layer and no support is needed.
+- Debossed text stems are thin — legible but not crisp; raise `label_size`
   if your printer needs it.
 - **Verify the module/can dimensions against your actual part with calipers**
   before printing — the `shield_*` values are read off low-resolution datasheet
@@ -180,7 +190,7 @@ openscad -o preview.png --camera=10,15,8,55,0,25,90 \
   --imgsize=1000,800 --autocenter --viewall --render=true wb3s_jig.scad
 ```
 
-All the tunable parameters (module/can geometry, clamp, channels, labels) are
+All the tunable parameters (module/can geometry, clamp, contacts, labels) are
 grouped at the top of `wb3s_jig.scad`.
 
 ## References
