@@ -24,8 +24,11 @@ would be BK7231N — the jig fits both; just select the matching type in the too
 1. Jig pins on VCC / GND / TXD1 / RXD1 / CEN (or the PCB pads), **3.3 V**.
 1. **Back up first** (full 2 MB): `ltchiptool flash read BK7231T wb3s-stock.bin`
    — keep it (contains Wi-Fi credentials).
-1. Flash OpenBeken (see README → *Install new firmware*; `BK7231Flasher` can
-   fetch the right image for you). Reset into download mode with **CEN → GND**.
+1. Flash OpenBeken (see README → *Install new firmware*): download the
+   `OpenBK7231T_UA_*.bin`
+   [release image](https://github.com/openshwprojects/OpenBK7231T_App/releases)
+   and `ltchiptool flash write` it. Reset
+   into download mode with **CEN → GND**.
 
 ## 3. Find the pins in OpenBeken
 

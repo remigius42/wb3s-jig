@@ -138,16 +138,21 @@ ltchiptool flash read BK7231T wb3s-stock-backup.bin
 ltchiptool flash write firmware.uf2
 ```
 
-- Auto-detects file type and offset. Common targets: **OpenBeken**
-  (`OpenBK7231T_*` images) or **LibreTiny / ESPHome** (`.uf2`).
+- Auto-detects file type and offset. For **OpenBeken**, download the
+  **`OpenBK7231T_UA_*.bin`** ("UART flash") image from the
+  [releases](https://github.com/openshwprojects/OpenBK7231T_App/releases): it is
+  the app-only image (no bootloader, flashed at `0x11000`), so it cannot touch
+  the bootloader and brick the BK7231**T**. **Avoid the `QIO` image** (a full
+  bootloader-and-app image at `0x0`) — needless flash wear on the bootloader
+  region. For **LibreTiny / ESPHome**, use the built `.uf2`.
 - Power-cycle when done and watch the firmware's UART console to confirm it
   boots.
-- GUI alternative that backs up then flashes in one cycle and can auto-download
-  the firmware: `BK7231Flasher.exe` in
-  [BK7231GUIFlashTool](https://github.com/openshwprojects/BK7231GUIFlashTool). But
-  it's a **.NET Framework** app — Windows-native, and on Linux only via **Mono**
-  (`mono BK7231Flasher.exe`), where it's flaky. On Linux just stick with
-  `ltchiptool` above (download the OpenBeken image manually); the Python
+- A Windows GUI alternative backs up then flashes in one cycle and can
+  auto-download the firmware: `BK7231Flasher.exe` in
+  [BK7231GUIFlashTool](https://github.com/openshwprojects/BK7231GUIFlashTool).
+  But it's a **.NET Framework** app — Windows-native, and on Linux only via
+  **Mono** (`mono BK7231Flasher.exe`), where it's flaky. On Linux just use
+  `ltchiptool` above with the `_UA_` image; the Python
   [`hid_download_py`](https://github.com/OpenBekenIOT/hid_download_py) is a
   no-Mono CLI fallback.
 
